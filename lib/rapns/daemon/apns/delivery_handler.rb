@@ -13,8 +13,8 @@ module Rapns
           @host, @port = HOSTS[@app.environment.to_sym]
         end
 
-        def deliver(notification, batch)
-          Rapns::Daemon::Apns::Delivery.new(@app, connection, notification, batch).perform
+        def deliver(notification)
+          Rapns::Daemon::Apns::Delivery.new(@app, connection, notification).perform
         end
 
         def stopped

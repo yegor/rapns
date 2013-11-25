@@ -1,7 +1,13 @@
+require 'active_record'
+
+require 'rapns/daemon/store/active_record/reconnectable'
+
 module Rapns
   module Apns
     class Notification < Rapns::Notification
       class MultipleAppAssignmentError < StandardError; end
+
+      include Rapns::Daemon::Store::ActiveRecord::Reconnectable
 
       validates :device_token, :presence => true
       validates :badge, :numericality => true, :allow_nil => true
@@ -37,6 +43,36 @@ module Rapns
           end
         else
           multi_json_load(string_or_json) rescue string_or_json
+        end
+      end
+
+      #  Marks notification as delivered due to error
+      #
+      #  <tt><code/tt>  Code error occured during delivery
+      #  <tt><description/tt>  Error description
+      #
+      def mark_delivered
+        with_database_reconnect_and_retry do
+          self.delivered = true
+          self.delivered_at = Time.now
+          self.save!(:validate => false)
+        end
+      end
+
+      #  Marks notification as failed due to error
+      #
+      #  <tt><code/tt>  Code error occured during delivery
+      #  <tt><description/tt>  Error description
+      #
+      def mark_failed(code, description)
+        with_database_reconnect_and_retry do
+          self.delivered = false
+          self.delivered_at = nil
+          self.failed = true
+          self.failed_at = Time.now
+          self.error_code = code
+          self.error_description = description
+          self.save!(:validate => false)
         end
       end
 
